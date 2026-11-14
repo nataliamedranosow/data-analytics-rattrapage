@@ -3,6 +3,7 @@
 Règles : R1 codes en texte -> R2 noms de catégorie normalisés -> R3 doublons de clé -> R4 catégorie manquante
 -> R5 même nom pour deux codes (signalé). La clé est TOUJOURS le code article, jamais le nom.
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -42,7 +43,7 @@ def normalize_category_names(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     """R2 : espaces insécables et espaces de fin dans les noms de catégories.
 
     (a) Constaté : « Flower/Leaf\\xa0Vegetables » (espace insécable) sur 100 des 251 articles : 100 lignes touchées
-        (la référence en annonçait 102, voir docs : nous n'en trouvons pas plus). Dans un filtre Tableau, la même
+        (aucun nom avec espace de fin). Dans un filtre de tableau de bord, la même
         catégorie apparaîtrait DEUX fois.
     (b) Règle : \\xa0 -> espace normal, espaces multiples réduits, espaces de début/fin retirés.
     (c) Métier : un filtre ou un tableau par catégorie doit montrer 6 lignes, pas 7.
@@ -97,8 +98,13 @@ def flag_duplicated_names(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     """
     df = df.copy()
     df["is_name_duplicated"] = df["item_name"].duplicated(keep=False)
-    log.add("R5", TABLE, "Même nom pour plusieurs codes", "signalé (is_name_duplicated)",
-            int(df["is_name_duplicated"].sum()))
+    log.add(
+        "R5",
+        TABLE,
+        "Même nom pour plusieurs codes",
+        "signalé (is_name_duplicated)",
+        int(df["is_name_duplicated"].sum()),
+    )
     return df
 
 

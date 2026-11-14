@@ -1,4 +1,5 @@
 """Tests des règles P1 à P6."""
+
 import pandas as pd
 
 from src.clean_price import (
@@ -73,10 +74,12 @@ def test_local_median_keeps_original_index_order():
 
 
 def test_full_price_cleaning_has_no_missing_left():
-    raw = pd.DataFrame({
-        "Date": pd.date_range("2022-01-01", periods=10).astype(str),
-        "Item Code": "A",
-        "Wholesale Price (RMB/kg)": [4, 4, 4, 4, 0.01, 4, 4, 4, 4, 4],
-    })
+    raw = pd.DataFrame(
+        {
+            "Date": pd.date_range("2022-01-01", periods=10).astype(str),
+            "Item Code": "A",
+            "Wholesale Price (RMB/kg)": [4, 4, 4, 4, 0.01, 4, 4, 4, 4, 4],
+        }
+    )
     out = clean_price(raw, RuleLog())
     assert out["wholesale_price"].notna().all() and out["is_wholesale_imputed"].sum() == 1
