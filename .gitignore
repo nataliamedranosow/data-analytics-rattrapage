@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+# Données volumineuses : jamais dans git (sauf .gitkeep)
+data/raw/*
+data/clean/*
+data/gold/*
+!data/*/.gitkeep
+# Extrait Tableau généré (le CSV suffit)
+*.hyper
