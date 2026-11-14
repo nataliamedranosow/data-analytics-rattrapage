@@ -8,13 +8,20 @@ import pandas as pd
 from src.config import IQR_FACTOR
 
 
-def read_csv(path: Path) -> pd.DataFrame:
+def file_has_bom(path: Path) -> bool:
+    """Vrai si le fichier commence par un BOM (caractère invisible UTF-8 : EF BB BF)."""
+    with open(path, "rb") as handle:
+        return handle.read(3) == b"\xef\xbb\xbf"
+
+
+def read_csv(path: Path, **kwargs) -> pd.DataFrame:
     """Lit un CSV brut.
 
     - utf-8-sig : retire le BOM (caractère invisible) qui colle au nom de la 1re colonne ;
     - Item Code en texte : c'est une clé de 15 chiffres, pas un nombre (on ne l'additionne jamais).
     """
-    return pd.read_csv(path, encoding="utf-8-sig", dtype={"Item Code": str})
+    dtype = {"Item Code": str, **kwargs.pop("dtype", {})}
+    return pd.read_csv(path, encoding="utf-8-sig", dtype=dtype, **kwargs)
 
 
 def iqr_bounds(values: pd.Series, factor: float = IQR_FACTOR) -> tuple[float, float]:
