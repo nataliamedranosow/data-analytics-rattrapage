@@ -46,13 +46,14 @@ def apply_types(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     raw_flag = df["is_promo"].astype(str).str.strip().str.lower()
     df["is_promo"] = raw_flag.map({"yes": True, "no": False})
     sale_type = df["sale_or_return"].astype(str).str.strip().str.lower()
-    changed_type = int((sale_type != df["sale_or_return"].astype(str)).sum())
+    changed_type = sale_type != df["sale_or_return"].astype(str)
     df["sale_or_return"] = sale_type
     df["item_code"] = df["item_code"].astype(str).str.strip()
     df["quantity_kg"] = pd.to_numeric(df["quantity_kg"], errors="coerce")
     df["unit_selling_price"] = pd.to_numeric(df["unit_selling_price"], errors="coerce")
+    touched = (raw_time != df["time"]) | changed_type
     log.add("T1", TABLE, "Types : date, booléen promo, heure à 3 décimales, sale/return en minuscules",
-            "corrigé (format)", int((raw_time != df["time"]).sum()) + changed_type)
+            "corrigé (format)", int(touched.sum()))
     return df
 
 
@@ -105,7 +106,7 @@ def cap_quantity_per_line(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
 
     (a) Constaté : médiane 0,44 kg, 99,99 % des lignes <= 7,7 kg, mais une ligne à 160 kg (9/6/2022, article
         102900011034354, prix 5,9 : impossible en caisse de supermarché).
-    (b) Règle : |quantité| > 50 kg -> remplacée par la médiane de |quantité| de l'article (lignes <= 50 kg), signe conservé.
+    (b) Règle : |quantité| > 50 kg -> médiane de |quantité| de l'article (lignes <= 50 kg), signe conservé.
     (c) Métier : une ligne ~1 kg ne peut pas peser 160 kg (faute de saisie, ex. 1,60 -> 160) : garder ce chiffre
         gonflerait le volume. On corrige au lieu de supprimer pour ne pas perdre la vente.
     (d) Corrigé + drapeau is_qty_corrected.
@@ -125,8 +126,9 @@ def cap_quantity_per_line(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
 def fix_price_typos(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     """T6 : prix de vente > 10 x la médiane de l'article.
 
-    (a) Constaté : un prix à 100 RMB/kg pour un article dont la médiane est ~10 (virgule décalée).
-        Les hausses modestes (x2, x3) existent vraiment (saisons) : sur 5 722 lignes > 3 x médiane, seules 2 dépassent 10 x.
+    (a) Constaté : l'article 106930274220092 se vend 4,9 RMB/kg (médiane) mais deux lignes sont à 100 RMB/kg
+        (20 x la médiane) : une vente le 19/12/2020 et son retour le lendemain, soit 2 lignes liées au même
+        faux prix. Les hausses modestes existent vraiment : sur 5 722 lignes > 3 x médiane, seules 2 dépassent 10 x.
     (b) Règle : prix > 10 x médiane de prix de l'article -> médiane de l'article.
     (c) Métier : un prix x10 est une faute de frappe, pas une vraie hausse ; il fausserait CA et marge.
         On NE corrige PAS les prix bas : une promotion est faite pour baisser le prix.
@@ -137,8 +139,8 @@ def fix_price_typos(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     typo = df["unit_selling_price"] > PRICE_SPIKE_RATIO * item_median
     df["is_price_corrected"] = typo
     df.loc[typo, "unit_selling_price"] = item_median[typo]
-    log.add("T6", TABLE, f"Prix de vente > {PRICE_SPIKE_RATIO} x médiane de l'article", "corrigé (médiane de l'article)",
-            int(typo.sum()))
+    log.add("T6", TABLE, f"Prix de vente > {PRICE_SPIKE_RATIO} x médiane de l'article",
+            "corrigé (médiane de l'article)", int(typo.sum()))
     return df
 
 
