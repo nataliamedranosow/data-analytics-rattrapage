@@ -1,21 +1,17 @@
 """Chemins et seuils du projet.
 
-Tous les seuils ont un nom explicite et sont justifiés dans docs/regles-de-nettoyage.md.
+Tous les seuils ont un nom explicite et sont justifiés dans la docstring de la règle qui les utilise.
 Un seuil n'est jamais écrit « en dur » dans le code de nettoyage.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
-
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 CLEAN_DIR = ROOT / "data" / "clean"
-GOLD_DIR = ROOT / "data" / "gold"
 REPORTS_DIR = ROOT / "reports"
-TABLEAU_DIR = ROOT / "tableau"
-IMG_DIR = ROOT / "docs" / "img"
 
 # --- Transactions -----------------------------------------------------------------------------
 MAX_QTY_KG_PER_LINE = 50  # T5 : une ligne de caisse de produit frais pèse ~1 kg (médiane 0,44 kg)
@@ -32,8 +28,5 @@ SPIKE_FACTOR = 3  # P5 : > 3 x ou < 1/3 de la médiane locale = pic / creux isol
 LOSS_RATE_DEFAULT = 9.43  # moyenne du fichier = remplissage automatique du fournisseur
 LOSS_RATE_MIN, LOSS_RATE_MAX = 0.0, 100.0
 
-# --- Périodes d'analyse -----------------------------------------------------------------------
-PERIOD_N = (pd.Timestamp("2022-07-01"), pd.Timestamp("2023-06-30"))
-PERIOD_N1 = (pd.Timestamp("2021-07-01"), pd.Timestamp("2022-06-30"))
-DATE_START, DATE_END = pd.Timestamp("2020-07-01"), pd.Timestamp("2023-06-30")
+# --- Référentiel produit ----------------------------------------------------------------------
 UNKNOWN_CATEGORY = "Unknown"
