@@ -1,4 +1,5 @@
 """Fonctions partagées : lecture des CSV, journal des règles, règle IQR."""
+
 from __future__ import annotations
 
 from pathlib import Path

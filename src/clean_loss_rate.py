@@ -4,6 +4,7 @@ Règles : L1 types (BOM, espaces) -> L2 taux hors [0 ; 100] manquant -> L3 valeu
 -> L4 taux à 0 % / manquants remplacés par la médiane de la catégorie -> L5 taux atypiques (IQR par catégorie) signalés.
 Statuts (loss_rate_status) : reported (valeur du fichier), default_value (9,43 %, conservée), imputed_median.
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -29,8 +30,13 @@ def apply_types(df: pd.DataFrame, log: RuleLog, had_bom: bool = False) -> pd.Dat
     stripped = raw_rate.str.strip()
     df["loss_rate_pct"] = pd.to_numeric(stripped, errors="coerce")
     df["item_code"] = df["item_code"].astype(str).str.strip()
-    log.add("L1", TABLE, "BOM devant Item Code et espaces dans le taux", "corrigé (format)",
-            int(had_bom) + int((raw_rate != stripped).sum()))
+    log.add(
+        "L1",
+        TABLE,
+        "BOM devant Item Code et espaces dans le taux",
+        "corrigé (format)",
+        int(had_bom) + int((raw_rate != stripped).sum()),
+    )
     return df
 
 
@@ -45,8 +51,13 @@ def mark_out_of_range_missing(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     df = df.copy()
     bad = (df["loss_rate_pct"] < LOSS_RATE_MIN) | (df["loss_rate_pct"] > LOSS_RATE_MAX)
     df.loc[bad, "loss_rate_pct"] = float("nan")
-    log.add("L2", TABLE, f"Taux hors [{LOSS_RATE_MIN:.0f} ; {LOSS_RATE_MAX:.0f}]", "manquant puis imputé (L4)",
-            int(bad.sum()))
+    log.add(
+        "L2",
+        TABLE,
+        f"Taux hors [{LOSS_RATE_MIN:.0f} ; {LOSS_RATE_MAX:.0f}]",
+        "manquant puis imputé (L4)",
+        int(bad.sum()),
+    )
     return df
 
 
@@ -64,8 +75,13 @@ def flag_default_value(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     df["loss_rate_status"] = "reported"
     is_default = (df["loss_rate_pct"] - LOSS_RATE_DEFAULT).abs() < 0.005
     df.loc[is_default, "loss_rate_status"] = "default_value"
-    log.add("L3", TABLE, f"Taux = {LOSS_RATE_DEFAULT} % (moyenne du fichier, remplissage fournisseur)",
-            "signalé (default_value)", int(is_default.sum()))
+    log.add(
+        "L3",
+        TABLE,
+        f"Taux = {LOSS_RATE_DEFAULT} % (moyenne du fichier, remplissage fournisseur)",
+        "signalé (default_value)",
+        int(is_default.sum()),
+    )
     return df
 
 
@@ -85,8 +101,13 @@ def impute_zero_and_missing(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     category_median = positive.groupby(df["category_name"]).transform("median")
     df.loc[to_fix, "loss_rate_pct"] = category_median[to_fix].fillna(positive.median())
     df.loc[to_fix, "loss_rate_status"] = "imputed_median"
-    log.add("L4", TABLE, "Taux à 0 % ou manquant -> médiane des taux > 0 de la catégorie", "corrigé (imputed_median)",
-            int(to_fix.sum()))
+    log.add(
+        "L4",
+        TABLE,
+        "Taux à 0 % ou manquant -> médiane des taux > 0 de la catégorie",
+        "corrigé (imputed_median)",
+        int(to_fix.sum()),
+    )
     return df
 
 
@@ -103,8 +124,9 @@ def flag_category_outliers(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     for _, group in df.groupby("category_name"):
         low, high = iqr_bounds(group["loss_rate_pct"])
         df.loc[group.index, "is_loss_outlier"] = (group["loss_rate_pct"] < low) | (group["loss_rate_pct"] > high)
-    log.add("L5", TABLE, "Taux atypique (IQR par catégorie)", "signalé (is_loss_outlier)",
-            int(df["is_loss_outlier"].sum()))
+    log.add(
+        "L5", TABLE, "Taux atypique (IQR par catégorie)", "signalé (is_loss_outlier)", int(df["is_loss_outlier"].sum())
+    )
     return df
 
 

@@ -1,4 +1,5 @@
 """Tests des règles R1 à R5."""
+
 import pandas as pd
 
 from src.clean_product import (
@@ -17,16 +18,22 @@ def products(rows):
 
 
 def test_r1_codes_are_text():
-    raw = pd.DataFrame({"Item Code": [" 102900005115168"], "Item Name": ["A"], "Category Code": ["1011"],
-                        "Category Name": ["X"]})
+    raw = pd.DataFrame(
+        {"Item Code": [" 102900005115168"], "Item Name": ["A"], "Category Code": ["1011"], "Category Name": ["X"]}
+    )
     log = RuleLog()
     out = apply_types(raw, log)
     assert out.loc[0, "item_code"] == "102900005115168" and log.count("R1") == 1
 
 
 def test_r2_nbsp_and_trailing_spaces_give_one_category():
-    df = products([("1", "A", "10", "Flower/Leaf Vegetables"), ("2", "B", "10", "Flower/Leaf Vegetables "),
-                   ("3", "C", "11", "Cabbage")])
+    df = products(
+        [
+            ("1", "A", "10", "Flower/Leaf Vegetables"),
+            ("2", "B", "10", "Flower/Leaf Vegetables "),
+            ("3", "C", "11", "Cabbage"),
+        ]
+    )
     log = RuleLog()
     out = normalize_category_names(df, log)
     assert out["category_name"].nunique() == 2 and log.count("R2") == 2
@@ -52,7 +59,13 @@ def test_r5_duplicated_name_is_flagged_not_merged():
 
 
 def test_full_product_cleaning():
-    raw = pd.DataFrame({"Item Code": ["1", "2"], "Item Name": ["A", "B"], "Category Code": ["10", "10"],
-                        "Category Name": ["X Y", "X Y"]})
+    raw = pd.DataFrame(
+        {
+            "Item Code": ["1", "2"],
+            "Item Name": ["A", "B"],
+            "Category Code": ["10", "10"],
+            "Category Name": ["X Y", "X Y"],
+        }
+    )
     out = clean_product(raw, RuleLog())
     assert out["category_name"].nunique() == 1

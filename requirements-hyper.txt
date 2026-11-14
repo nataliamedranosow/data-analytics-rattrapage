@@ -1,2 +1,0 @@
-# Optionnel : génère tableau/mart_mois_article.hyper (le CSV suffit sinon)
-tableauhyperapi

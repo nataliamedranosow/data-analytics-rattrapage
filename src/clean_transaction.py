@@ -4,6 +4,7 @@ Chaque règle suit le même plan : (a) problème constaté, (b) règle exacte, (
 Ordre d'application : T1 types -> T2 lignes sans vente -> T3 doublons -> T4 signe -> T5 plafond de quantité
 -> T6 prix aberrants -> T7 quantités atypiques (signalement).
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -38,7 +39,13 @@ def normalize_time(times: pd.Series) -> pd.Series:
 
 
 def apply_types(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
-    """T1 : types. Date en date, Discount Yes/No en booléen, heure à 3 décimales, sale/return en minuscules."""
+    """T1 : types. Date en date, Discount Yes/No en booléen, heure à 3 décimales, sale/return en minuscules.
+
+    (a) Constaté : les dates et « Yes/No » arrivent en texte ; « Sale or Return » peut avoir majuscules/espaces.
+    (b) Règle : date -> date ; Yes/No -> True/False ; heure -> HH:MM:SS.mmm (voir normalize_time) ; strip + minuscules.
+    (c) Métier : on ne peut pas calculer par jour, par période ni filtrer les promotions avec du texte.
+    (d) Corrigé (format uniquement) : on compte les lignes dont l'heure ou le type ont dû être réécrits.
+    """
     df = df.rename(columns=RENAMES).copy()
     raw_time = df["time"].astype(str)
     df["time"] = normalize_time(df["time"])
@@ -52,8 +59,13 @@ def apply_types(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     df["quantity_kg"] = pd.to_numeric(df["quantity_kg"], errors="coerce")
     df["unit_selling_price"] = pd.to_numeric(df["unit_selling_price"], errors="coerce")
     touched = (raw_time != df["time"]) | changed_type
-    log.add("T1", TABLE, "Types : date, booléen promo, heure à 3 décimales, sale/return en minuscules",
-            "corrigé (format)", int(touched.sum()))
+    log.add(
+        "T1",
+        TABLE,
+        "Types : date, booléen promo, heure à 3 décimales, sale/return en minuscules",
+        "corrigé (format)",
+        int(touched.sum()),
+    )
     return df
 
 
@@ -63,7 +75,7 @@ def drop_lines_without_sale(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     (a) Constaté : valeurs manquantes, prix <= 0 ou quantité = 0 (ici 0 cas, mais la règle protège le pipeline).
     (b) Règle : supprimer si une colonne clé est vide, ou prix <= 0, ou quantité == 0.
     (c) Métier : une ligne sans quantité ou sans prix ne représente aucune vente : la supprimer ne change pas le CA.
-    (d) Supprimé (dernier recours : seul cas où il n'y a rien à corriger).
+    (d) Supprimé (dernier recours : ces lignes ne correspondent à aucune vente).
     """
     key_cols = ["date", "time", "item_code", "quantity_kg", "unit_selling_price", "sale_or_return", "is_promo"]
     bad = df[key_cols].isna().any(axis=1) | (df["unit_selling_price"] <= 0) | (df["quantity_kg"] == 0)
@@ -118,8 +130,13 @@ def cap_quantity_per_line(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     sign = df["quantity_kg"].map(lambda q: -1 if q < 0 else 1)
     df["is_qty_corrected"] = too_big
     df.loc[too_big, "quantity_kg"] = (item_median * sign)[too_big]
-    log.add("T5", TABLE, f"|Quantité| > {MAX_QTY_KG_PER_LINE} kg par ligne", "corrigé (médiane de l'article)",
-            int(too_big.sum()))
+    log.add(
+        "T5",
+        TABLE,
+        f"|Quantité| > {MAX_QTY_KG_PER_LINE} kg par ligne",
+        "corrigé (médiane de l'article)",
+        int(too_big.sum()),
+    )
     return df
 
 
@@ -139,8 +156,13 @@ def fix_price_typos(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     typo = df["unit_selling_price"] > PRICE_SPIKE_RATIO * item_median
     df["is_price_corrected"] = typo
     df.loc[typo, "unit_selling_price"] = item_median[typo]
-    log.add("T6", TABLE, f"Prix de vente > {PRICE_SPIKE_RATIO} x médiane de l'article",
-            "corrigé (médiane de l'article)", int(typo.sum()))
+    log.add(
+        "T6",
+        TABLE,
+        f"Prix de vente > {PRICE_SPIKE_RATIO} x médiane de l'article",
+        "corrigé (médiane de l'article)",
+        int(typo.sum()),
+    )
     return df
 
 
@@ -158,8 +180,13 @@ def flag_quantity_outliers(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     q1, q3 = grouped.transform(lambda s: s.quantile(0.25)), grouped.transform(lambda s: s.quantile(0.75))
     upper = q3 + IQR_FACTOR * (q3 - q1)
     df["is_qty_outlier"] = abs_qty > upper
-    log.add("T7", TABLE, "Quantité atypique (IQR par article, borne haute)", "signalé (is_qty_outlier)",
-            int(df["is_qty_outlier"].sum()))
+    log.add(
+        "T7",
+        TABLE,
+        "Quantité atypique (IQR par article, borne haute)",
+        "signalé (is_qty_outlier)",
+        int(df["is_qty_outlier"].sum()),
+    )
     return df
 
 

@@ -1,4 +1,5 @@
 """Tests des règles L1 à L5."""
+
 import pandas as pd
 
 from src.clean_loss_rate import (
@@ -14,8 +15,15 @@ from src.common import RuleLog
 
 def rates(values, category="X"):
     n = len(values)
-    return pd.DataFrame({"item_code": [str(i) for i in range(n)], "item_name": "n", "loss_rate_pct": values,
-                         "category_name": category, "loss_rate_status": "reported"})
+    return pd.DataFrame(
+        {
+            "item_code": [str(i) for i in range(n)],
+            "item_name": "n",
+            "loss_rate_pct": values,
+            "category_name": category,
+            "loss_rate_status": "reported",
+        }
+    )
 
 
 def test_l1_trailing_space_and_bom_are_cleaned():
@@ -53,8 +61,9 @@ def test_l4_uses_each_category_median():
 
 
 def test_l5_outlier_per_category_is_flagged_and_kept():
-    df = pd.concat([rates([5.0, 5.1, 5.2, 5.3, 5.4, 30.0], "A"), rates([30.0, 31.0, 32.0, 33.0, 34.0], "B")],
-                   ignore_index=True)
+    df = pd.concat(
+        [rates([5.0, 5.1, 5.2, 5.3, 5.4, 30.0], "A"), rates([30.0, 31.0, 32.0, 33.0, 34.0], "B")], ignore_index=True
+    )
     log = RuleLog()
     out = flag_category_outliers(df, log)
     assert len(out) == 11 and out["is_loss_outlier"].sum() == 1 and out.loc[5, "is_loss_outlier"]

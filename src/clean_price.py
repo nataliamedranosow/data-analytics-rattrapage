@@ -8,6 +8,7 @@ est cher en hiver, bon marché en été). Une IQR calculée sur 3 ans « aplatir
 déclarant atypiques, et on remplacerait de vrais coûts par une moyenne : la marge serait fausse. On compare donc
 chaque prix à SES voisins (médiane locale) : seul un point isolé est suspect.
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -92,8 +93,13 @@ def mark_isolated_spikes_missing(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame
     spike = (df["wholesale_price"] > SPIKE_FACTOR * med) | (df["wholesale_price"] < med / SPIKE_FACTOR)
     df.loc[spike.fillna(False), "wholesale_price"] = float("nan")
     df["is_wholesale_imputed"] = df["is_wholesale_imputed"] | spike.fillna(False)
-    log.add("P5", TABLE, f"Pic/creux isolé (> {SPIKE_FACTOR} x ou < 1/{SPIKE_FACTOR} de la médiane locale)",
-            "manquant puis imputé (P6)", int(spike.fillna(False).sum()))
+    log.add(
+        "P5",
+        TABLE,
+        f"Pic/creux isolé (> {SPIKE_FACTOR} x ou < 1/{SPIKE_FACTOR} de la médiane locale)",
+        "manquant puis imputé (P6)",
+        int(spike.fillna(False).sum()),
+    )
     return df
 
 
@@ -111,8 +117,13 @@ def impute_missing_prices(df: pd.DataFrame, log: RuleLog) -> pd.DataFrame:
     med_item = df.groupby("item_code")["wholesale_price"].transform("median")
     df.loc[missing, "wholesale_price"] = med_local[missing].fillna(med_item[missing])
     df["is_wholesale_imputed"] = df["is_wholesale_imputed"] | missing
-    log.add("P6", TABLE, "Prix manquant -> médiane locale, sinon médiane de l'article", "corrigé (imputed_median)",
-            int(missing.sum()))
+    log.add(
+        "P6",
+        TABLE,
+        "Prix manquant -> médiane locale, sinon médiane de l'article",
+        "corrigé (imputed_median)",
+        int(missing.sum()),
+    )
     return df
 
 
